@@ -206,14 +206,14 @@ head(Auto) # view the first few rows of the data
 # using the na.strings tells R that any time it sees a set of characters 
 # it should be treated as a missing element of the data matri
 
-Auto <- read.table("../Datasets/Auto.data", header=TRUE, na.strings="?", stringsAsFactors=TRUE)
+Auto <- read.table("Datasets/Auto.data", header=TRUE, na.strings="?", stringsAsFactors=TRUE)
 View(Auto)
 
 # The sringsAsFactors=TRUE argument tells R that any variable containing character strings should be interpreted as a qualitative variable,
 # and that each distinct character string represents a distinct level for that qualitative variable
 
 # An easy way to load data from Excel to R is to save it as a csv (comma-separated-values) files, and use the read.csv() function
-Auto <- read.csv("../Datasets/Auto.csv", na.strings="?", stringsAsFactors=T)
+Auto <- read.csv("Datasets/Auto.csv", na.strings="?", stringsAsFactors=T)
 View(Auto)
 
 dim(Auto)
