@@ -130,3 +130,123 @@ predict(glm.fits,
 #################################################################################
 # Linear Discriminant Analysis
 ####################################################################################
+# Now we perform LDA on the Smarket data
+# use the lda() function, which is part of the MASS library
+# syntax of lda() is similar to that of lm() and glm() except for the family argument
+# we fit the model using only the observations before 2005
+
+library(MASS)
+# create subset of training data
+train <- Smarket$Year < 2005
+lda.fit <- lda(Direction ~ Lag1 + Lag2, data=Smarket, subset=train)
+lda.fit
+# prior probability of Down: 0.49 
+# prior probability of Up: 0.508 -> 50.8% of observations correspond to days where market went up
+# The group means are the average (mu) of each predictor within each class
+# The coefficients of linear discriminant output provides the linear combination of Lag1 and Lag2
+# that are used to form the LDA decision rule.
+
+# The plot() function produces plots of the linear discriminants
+# obtained by computing the linear combinations of the predictors for each training observations 
+plot(lda.fit)
+
+# The predict() function returns a list with three elements
+# The first element, class, contains LDA's prredictions about the movement of the market
+# The second element, posterior, is a matrix whose kth column contains the posterior probability
+# that the corresponding observation belongs to the kth class
+# The third element, x, contains the linear descriminants
+
+Smarket.2005 <- Smarket[!train, ]
+lda.pred <- predict(lda.fit, Smarket.2005)
+names(lda.pred)
+# class, posterior, x
+lda.class <- lda.pred$class
+table(lda.class, Smarket.2005$Direction)
+
+
+mean(lda.class==Smarket.2005$Direction)
+# accuracy score: 0.56
+
+# applying a 50% threshold to the posterior probabilities
+# allows us to recreate the predictions contained in lda.pred$class
+sum(lda.pred$posterior[, 1] >= 0.5)
+# 70
+sum(lda.pred$posterior[, 1] < 0.5)
+# 182
+# notice that the posterior probability output by the model corresponds to the probability that the market will decrease
+
+lda.pred$posterior[1:20, 1]
+lda.class[1:20]
+
+# suppose we wanted to use a posterior probability threshold other than 50% in order to make predictions,
+sum(lda.pred$posterior[, 1] > .9)
+# 0 
+max(lda.pred$posterior[,1])
+# maximum probability was 0.520 for year 2005
+
+##########################################################################################
+# Quadratic Discriminant Analysis
+###################################################################################
+# We will now fit a QDA model to the Smarket data
+# QDA is implemented using the qda() function which i part of the MASS library
+# qda() syntax is identical to that of lda()
+
+qda.fit <- qda(Direction ~ Lag1 + Lag2, data=Smarket, subset=train)
+qda.fit
+
+# The output contains the group means
+# output does not contain the coefficients of the discriminants
+
+# The predict() function works in exactly the same fashion as for LDA
+qda.class <- predict(qda.fit, Smarket.2005)
+names(qda.class)
+# class, posterior
+table(qda.class$class, Smarket.2005$Direction)
+
+mean(qda.class$class == Smarket.2005$Direction)
+# accuracy score: 0.60
+# the QDA predictions are accurate almost 60% of the time
+# The level of accuracy is quit impressive for stock market data
+# this suggests that the quadratic form assumed by QDA 
+# may capture the true r/ship more accurately than the LDA and logistic regression
+
+#################################################################################
+# Naive Bayes
+###################################################################################
+# We fit a Naive Bayes model to the Smarket data.
+# Naive Bayes is implemented in R using the naiveBayes() function, which is part of e1071 library
+# syntax is identical to that of lda() and qda()
+# by default this implementation of the naive Bayes classifier models each quantitative feature
+# using a Gaussian distribution. 
+# However, a kernel density method can also be used to estimate the distributions.
+
+library(e1071)
+nb.fit <- naiveBayes(Direction ~ Lag1 + Lag2, data=Smarket, subset=train)
+nb.fit
+
+# The output contains the estimated mean and standard deviation for each variable in each class.
+# for instance, the mean for Lag1 is 0.0428 for Direction=Down,
+# and standard deviation is 1.23 
+# we can easily verify the results
+mean(Smarket$Lag1[train][Smarket$Direction[train]=="Down"])
+# 0.04279
+sd(Smarket$Lag1[train][Smarket$Direction[train]=="Down"])
+# 1.227
+
+# The predict() function is straightforward
+nb.pred <- predict(nb.fit, Smarket.2005)
+table(nb.pred, Smarket.2005$Direction)
+mean(nb.pred==Smarket.2005$Direction)
+# 0.591
+
+# Naive Bayes performs very well on this data, with accurate predictions over 59% of the time
+# This is slightly worse than QDA but better than LDA and logistic regression
+
+# The predict() function can also generate estimates of the probability that each observation belongs to a particular class
+nb.probs <- predict(nb.fit, Smarket.2005, type="raw")
+nb.probs[1:5, ]
+
+##########################################################################################
+# K-Nearest Neighbor
+################################################################################
+# now we fit the KNN on the Smarket data
