@@ -250,3 +250,131 @@ nb.probs[1:5, ]
 # K-Nearest Neighbor
 ################################################################################
 # now we fit the KNN on the Smarket data
+# we use the knn() function, which is part of the class library
+library(ISLR2) # for Smarket data set
+library(class)
+?knn
+# nn() function is different from other fitting functions we have encountered thus far
+# Rather than a two-step approach in which we first fir the model and then we use the model to make predictions,
+# knn() forms predictions using a single command
+# The function requires four inputs:
+# 1. A matrix containing the predictors associated with the training data, labeled train.X below
+# 2. A matrix containing the predictors associated with the data for which we wish to make predictions, labeled test.X
+# 3. A vector containing the class labels for the training observations, labeled train.Direction
+# 4. A value for K, the number of nearest neighbors to be used by the classifier
+
+# We use cbind() "column bind" to bind the Lag1 and Lag2 variables together into two matrices,
+# one for the training set and the other for the test set
+train <- Smarket$Year < 2005
+Direction.2005 <- Smarket$Direction[!train]
+train.X <- cbind(Smarket$Lag1, Smarket$Lag2)[train, ]
+test.X <- cbind(Smarket$Lag1, Smarket$Lag2)[!train, ]
+train.Directions <- Smarket$Direction[train]
+
+# Now the knn() function can be used to predict the market's movement for the dates in 2005.
+# Set a random seed for reproducibility
+set.seed(1)
+knn.pred <- knn(train.X, test.X, train.Directions, k=1)
+table(knn.pred, Direction.2005)
+mean(knn.pred == Direction.2005)
+# 0.5 
+# when K=1 results are not very good, since only 50% of the observations are correctly predicted
+
+knn.pred <- knn(train.X, test.X, train.Directions, k=3)
+table(knn.pred, Direction.2005)
+mean(knn.pred==Direction.2005)
+# 0.536
+# results have improved slightly.
+# KNN does not provide good predictions for the Smarket data but it does often provide impressive results
+
+# We will apply the KNN approach to the Caravan data set.
+# This data set includes 85 predictors that measure demographic characteristics for 5822 individuals.
+# The response variable is Purchase,
+# which indicates whether or not a given individual purchases a caravan insurance policy.
+# In this data set, only 6% of people purchased caravan insurance.
+
+dim(Caravan)
+attach(Caravan)
+summary(Purchase)
+# no: 5474
+# Yes: 348
+
+# Because KNN classifier predicts the class of a given test observation
+# by identifying the observations that are nearest to it, the scale of the variables matters.
+# Variables that are on a large scale will have a much larger effect 
+# on the distance between the observations, and hence on the KNN classifier,
+# than variables that are on a small scale.
+# A good way to handle this problem is to standardize the data
+# so that all variables are given a mean of zero and a standard deviation of one.
+# Then all variables will be on a comparable scale.
+# The scale() function does just this
+# In standardizing the data, we exclude column 86, because that is the qualitative Purchase variable
+
+standardized.X <- scale(Caravan[, -86])
+var(Caravan[, 1]) # 165.038
+var(Caravan[, 2]) # 0.1647
+var(standardized.X[,1]) # 1
+var(standardized.X[,2]) # 1
+
+# split the observations into a test set, containing the first 1,000 observations
+# and a training set, containing the remaining observations.
+
+test <- 1:1000
+train.X <- standardized.X[-test, ]
+test.X <- standardized.X[test, ]
+train.Y <- Purchase[-test]
+test.Y <- Purchase[test]
+set.seed(1)
+knn.pred <- knn(train.X, test.X, train.Y, k=1)
+mean(test.Y != knn.pred)
+# error rate: 0.118
+mean(test.Y != 'No')
+# 0.059
+# The KNN error rate on the 1000 test observations is just under 12%
+# This may appear go be fairly good. However, since only 6% of Y is yes
+# we could get the error rate down to 6% by always predicting No
+
+# The company would like to try to sell insurance only to customers who are likely to buy it.
+# So the overall error rate is not of interest.
+# Instead, the fraction of individuals that are correctly predicted to buy insurance is of interest.
+
+table(knn.pred, test.Y)
+9/(68+9) 
+# success rate is 11.7 when k=1
+
+# Using K=3, the success rate increases to 19%
+knn.pred <- knn(train.X, test.X, train.Y, k=3)
+table(knn.pred, test.Y)
+5/(21+5)
+# 19.23%
+
+# Using K=5 the rate is 26.7%
+knn.pred <- knn(train.X, test.X, train.Y, k=5)
+table(knn.pred, test.Y)
+4/(11+4)
+# 0.267
+
+# As comparison we also fit a logistic regression model to the data.
+# If we use 0.5 as the threshold for the classifier, then we have a problem:
+# only seven of the test observations are predicted to purchase insurance.
+# all these seven predicted observations are wrong
+
+# if instead we predict a purchase any time the predicted probability exceeds 0.25, 
+# we get better results: we predict that 33 people will purchase insurance
+# And we are correct for about 33% of these people.
+
+glm.fits <- glm(Purchase ~ ., data=Caravan, family=binomial, subset=-test)
+
+glm.probs <- predict(glm.fits, Caravan[test, ], type="response")
+#glm.pred <- rep('No', 1000)
+glm.pred <- ifelse(glm.probs > .5, "Yes", "No")
+table(glm.pred, test.Y)
+
+glm.pred <- ifelse(glm.probs > .25, "Yes", "No")
+table(glm.pred, test.Y)
+11/(22+11)
+# 0.333
+
+##################################################################################
+# Poisson Regression
+###################################################################################
