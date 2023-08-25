@@ -378,3 +378,94 @@ table(glm.pred, test.Y)
 ##################################################################################
 # Poisson Regression
 ###################################################################################
+# We fit a Poisson regression model to the Bikeshare data set,
+# which measures the number of bike rentals (bikers) per hour in Washington, DC.
+# The data set is part of the ISLR2 library
+# Poisson regression: done with the glm() function
+# argument family has to be set to Poisson
+library(ISLR2)
+attach(Bikeshare)
+dim(Bikeshare)
+# 8645 rows, 15 columns
+names(Bikeshare)
+
+# begin by fitting a least squares regression model to the data
+mod.lm <- lm(
+  bikers ~ mnth + hr + workingday + temp + weathersit,
+  data=Bikeshare
+)
+summary(mod.lm)
+# the first level of hr (0) and mnth (Jan) are treated as baseline values,
+# so no coefficient estimates are provided for them:
+# their coefficient is zero, and all other levels are measured relative to the baselines
+# The Feb coefficient of 6.845 signifies that,
+# holding all other variables constant, there are on average about 7 more riders in Feb than in Jan
+
+### Let's use different coding for the two qualitative variables
+contrasts(Bikeshare$hr) = contr.sum(24)
+contrasts(Bikeshare$mnth) = contr.sum(12)
+mod.lm2 <- lm(
+  bikers ~ mnth + hr + workingday + temp + weathersit,
+  data=Bikeshare
+)
+summary(mod.lm2)
+
+# in mod.lm2 a coefficient for all months is reported except for the last month 12
+# a coefficient of all hours is reported except for the last hour 24
+
+# In mod.lm2, the coefficient for the last level of mnth is not zero:
+# it is the negative of the sum of the coefficient estimates for all other levels
+
+# the coefficient for the last level of hour is the negative sum of the coefficient
+# estimates for all of the other levels
+
+# This means that the coefficients of hr and mnth in mod.lm2 will always sum to zero,
+# and can be interpreted as the difference from the mean level
+# Example: the coefficient for January of -46.087 indicates that
+# holding all other variables constant, 
+# there are typically 46 fewer rides in January relative to yearly average
+
+# The choice of coding does not matter, provided that we interpret the model output correctly
+
+sum((predict(mod.lm)- predict(mod.lm2))^2)
+# virtually zero, the sum of differences squared
+# predictions from both models are the same
+all.equal(predict(mod.lm),predict(mod.lm2))
+# TRUE 
+
+# to get the coefficient of the missing level in mod.lm2 we use the negative sum of other coefficients
+coef.months <- c(coef(mod.lm2)[2:12], -sum(coef(mod.lm2)[2:12]))
+plot(coef.months, xlab="Month", ylab="Coefficient", xaxt="n", col="blue", pch=19, type="o")
+# manually label the x-axis with the names of the months
+axis(side=1, at=1:12, labels=c("J","F","M","A","M","J","J","A","S","O","N","D"))
+
+# create a coefficient plot for hours
+coef.hrs <- c(coef(mod.lm2)[13:35], -sum(coef(mod.lm2)[13:35]))
+plot(coef.hrs, xlab="Hour", ylab="Coefficient", col="blue", pch=19, type="o")
+
+# Now we fit a Poisson Regression model
+mod.pois <- glm(
+  bikers ~ mnth + hr + workingday + temp + weathersit,
+  data=Bikeshare, family=poisson
+)
+summary(mod.pois)
+
+# plot coefficients associated with month
+coef.months <- c(coef(mod.pois)[2:12], -sum(coef(mod.pois)[2:12]))
+plot(coef.months, xlab="Month", ylab="Coefficient",
+     main="Month Coefficients for Poisson regression", col="blue", pch=19, type="o")
+# manually label the x-axis with the names of the months
+axis(side=1, at=1:12, labels=c("J","F","M","A","M","J","J","A","S","O","N","D"))
+
+# coefficients for the hour variable
+coef.hrs <- c(coef(mod.pois)[13:35], -sum(coef(mod.pois)[13:35]))
+plot(coef.hrs, xlab="Hour", ylab="Coefficient",
+     main="Hour Coefficients for Poisson Regression", col="blue", pch=19, type="o")
+
+# use the predict variable with type="response"
+
+plot(predict(mod.lm), predict(mod.pois, type="response"))
+abline(0, 1, col=2, lwd=3)
+
+# predictions of linear model are correlated with those of Poisson regression model
+# predictions for Poisson regression are positive
