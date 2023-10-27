@@ -5,7 +5,14 @@
 # approach. Do not forget to set a random seed before beginning your analysis.
 
 # a.) Fit a logistic regression model that uses income and balance to predict default
-
+library(ISLR2)
+set.seed(1)
+dim(Default)
+# convert default column to numeric
+glm.fit <- glm(default ~ balance + income, data=Default, family=binomial)
+glm.probs <- predict(glm.fit, Default, type="response")
+glm.preds <- ifelse(glm.probs > 0.5, "Yes", "No")
+mean(glm.preds == Default$default)
 
 # b.) Using the validation set approach, estimate the test error of this model.
 # In order to do this you must perform the following steps:
@@ -19,18 +26,53 @@
 # iv. Compute the validation set error, which is the fraction of the observations
 # in the validation set that are misclassified
 
+# use 5000 observations as training
+set.seed(2)
+train <- sample(10000, 5000)
+
+glm.fit1 <- glm(default ~ balance + income, family=binomial, data=Default, subset=train)
+summary(glm.fit1)
+glm.probs <- predict(glm.fit1, Default[-train,], type="response")
+glm.preds <- ifelse(glm.probs>0.5, "Yes", "No")
+mean(glm.preds == Default[-train,]$default) # 0.9737
+
+set.seed(334)
+train <- sample(10000, 5000)
+glm.fit2 <- glm(default ~ balance + income, family=binomial, data=Default, subset=train)
+
+glm.probs <- predict(glm.fit2, Default[-train,], type="response")
+glm.preds <- ifelse(glm.probs > 0.5, "Yes", "No")
+mean(glm.preds == Default[-train,]$default)
+# 97.2% 
+
+set.seed(1000)
+train <- sample(10000, 5000)
+glm.fit3 <- glm(default ~ balance + income, data=Default, subset=train, family=binomial)
+glm.probs <- predict(glm.fit3, Default[-train,], type="response")
+glm.preds <- ifelse(glm.probs>0.5, "Yes", "No")
+mean(glm.preds == Default[-train,]$default)
+# 97.16%
 
 # c.) Repeat the process in (b) three times, using three different splits of the
 # observations into a training set and a validation set. 
 # Comment on the results obtained.
 
+# The validation changes but not significantly. This is because the Default
+# dataset is imbalanced and most observations did not default 96.7% were "No"
 
 # d.) Now consider a logistic regression model that predicts the probability of
 # default using income, balance, and a dummy variable for student. Estimate the
 # test error for this model using the validation set approach. 
 # Comment on whether or not including a dummy variable for student leads to a 
 # reduction in the test error rate.
+set.seed(123)
+train <- sample(10000,5000)
+glm.fit <- glm(default ~ income + balance + student, data=Default, subset=train, family=binomial)
+glm.probs <- predict(glm.fit, Default[-train, ], type="response")
+glm.preds <- ifelse(glm.probs>0.5, "Yes", "No")
+mean(glm.preds==Default[-train,]$default) # .9728
 
+# Including a dummy variable does not lead to a reduction in test error rate
 
 ###############################################################################
 # 6. We continue to consider the use of a logistic regression model to predict 
