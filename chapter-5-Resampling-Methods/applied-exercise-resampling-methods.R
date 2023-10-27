@@ -134,17 +134,29 @@ boot(Default, boot.fn, 1000)
 # logistic regression model on the Weekly data set.
 
 # a.) Fit a logistic regression model that predicts Direction using Lag1 and Lag2
-
+glm.fit <-glm(Direction~Lag1+Lag2, data=Weekly, family=binomial)
+summary(glm.fit)
+glm.probs <- predict(glm.fit, Weekly, type="response")
+glm.preds <- ifelse(glm.probs>0.5,"Up","Down")
+mean(glm.preds != Weekly$Direction)
+# .444 error rate
 
 # b.) Fit a logistic regression model that predicts Direction using Lag1 and Lag2
 # Using all but the first observation.
-
+train <- Weekly[-1,]
+test <- Weekly[1,]
+loocv_glm <- glm(Direction ~ Lag1+Lag2, data=train, family=binomial)
+summary(loocv_glm)
 
 # c.) Use the model from (b) to predict the direction of the first observation.
 # You can do this by predicting that the first observation will go up if 
 # P(Direction="Up"|Lag1, Lag2) > 0.5. 
 # Was this observation correctly classified?
+test.prob <- predict.glm(loocv_glm, test, type="response")
+test.pred <- ifelse(test.prob > 0.5, "Up", "Down")
+test.pred # Up
 
+# This observation was misclassified 
 
 # d.) Write a for loop from i = 1 to i = n, where n is the number of observations
 # in the data set, that performs each of the following steps:
@@ -158,11 +170,25 @@ boot(Default, boot.fn, 1000)
 # the ith observation. If an error was made, then indicate this as a 1, 
 # and otherwise indicate it as a 0.
 
+num_obs <- dim(Weekly)[1]
+for(i in 1:num_obs){
+  train <- Weekly[-i,]
+  test <- Weekly[i,]
+  
+  glm.fit <- glm(Direction ~ Lag1+Lag2, data=train, family=binomial)
+  test.prob <- predict(glm.fit, test, type="response")
+  test.pred <- ifelse(test.prob>0.5,"Up","Down")
+  pred_right[i] <- ifelse(test.pred == test$Direction, 0, 1)
+  #print(pred_right)
+}
 
 # e.) Take the average of the n numbers obtained in (d) iv in order to obtain the
 # LOOCV estimate for the test error. Comment on the results.
 
+length(pred_right) # 1089
+mean(pred_right) # .449954
 
+# This method only got 45% test error rate
 
 # 8. We will now perform cross-validation on a simulated data set.
 
