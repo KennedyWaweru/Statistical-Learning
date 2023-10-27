@@ -12,7 +12,8 @@ dim(Default)
 glm.fit <- glm(default ~ balance + income, data=Default, family=binomial)
 glm.probs <- predict(glm.fit, Default, type="response")
 glm.preds <- ifelse(glm.probs > 0.5, "Yes", "No")
-mean(glm.preds == Default$default)
+mean(glm.preds != Default$default) # Error rate
+# 0.0263
 
 # b.) Using the validation set approach, estimate the test error of this model.
 # In order to do this you must perform the following steps:
@@ -34,7 +35,8 @@ glm.fit1 <- glm(default ~ balance + income, family=binomial, data=Default, subse
 summary(glm.fit1)
 glm.probs <- predict(glm.fit1, Default[-train,], type="response")
 glm.preds <- ifelse(glm.probs>0.5, "Yes", "No")
-mean(glm.preds == Default[-train,]$default) # 0.9737
+mean(glm.preds != Default[-train,]$default) # test error rate
+# 0.0238
 
 set.seed(334)
 train <- sample(10000, 5000)
@@ -42,22 +44,22 @@ glm.fit2 <- glm(default ~ balance + income, family=binomial, data=Default, subse
 
 glm.probs <- predict(glm.fit2, Default[-train,], type="response")
 glm.preds <- ifelse(glm.probs > 0.5, "Yes", "No")
-mean(glm.preds == Default[-train,]$default)
-# 97.2% 
+mean(glm.preds != Default[-train,]$default)
+# 0.028
 
 set.seed(1000)
 train <- sample(10000, 5000)
 glm.fit3 <- glm(default ~ balance + income, data=Default, subset=train, family=binomial)
 glm.probs <- predict(glm.fit3, Default[-train,], type="response")
 glm.preds <- ifelse(glm.probs>0.5, "Yes", "No")
-mean(glm.preds == Default[-train,]$default)
-# 97.16%
+mean(glm.preds != Default[-train,]$default)
+# 0.0284
 
 # c.) Repeat the process in (b) three times, using three different splits of the
 # observations into a training set and a validation set. 
 # Comment on the results obtained.
 
-# The validation changes but not significantly. This is because the Default
+# The test error rate changes with change in the validation set chosen, but it does not change significantly. This is because the Default
 # dataset is imbalanced and most observations did not default 96.7% were "No"
 
 # d.) Now consider a logistic regression model that predicts the probability of
@@ -70,7 +72,7 @@ train <- sample(10000,5000)
 glm.fit <- glm(default ~ income + balance + student, data=Default, subset=train, family=binomial)
 glm.probs <- predict(glm.fit, Default[-train, ], type="response")
 glm.preds <- ifelse(glm.probs>0.5, "Yes", "No")
-mean(glm.preds==Default[-train,]$default) # .9728
+mean(glm.preds!=Default[-train,]$default) # .0284
 
 # Including a dummy variable does not lead to a reduction in test error rate
 
@@ -83,23 +85,46 @@ mean(glm.preds==Default[-train,]$default) # .9728
 # (2) using the standard formula for computing the standard errors in the glm() function
 # Do not forget to set a random seed before beginning your analysis.
 
+set.seed(123)
 # a.) Using the summary() and glm() functions, determine the estimated standard errors
 # for the coefficients associated with income and balance in a multiple logistic 
 # regression model that uses both predictors.
+
+glm.fit <- glm(default ~ balance + income, data=Default, family=binomial)
+summary(glm.fit)
+
+# Estimated Standard Errors
+# balance: 2.274e-04
+# income: 4.985e-06
 
 
 # b.) Write a function, boot.fn(), that takes as input the Default data set
 # as well as an index of the observations, and that outputs the coefficient
 # estimates for income and balance in the multiple logistic regression model.
 
+boot.fn <- function(input, index){
+  glm.fit <- glm(default ~ balance + income, data=input, subset=index, family=binomial)
+  coefficients(glm.fit)[2:3]
+}
+
+boot.fn(Default, 1:2000)
 
 # c.) Use the boot() function together with your boot.fn() function to estimate the
 # standard errors of the logistic regression coefficients for income and balance.
+library(boot)
+boot(Default, boot.fn, 1000)
 
+# bootstrap standard errors
+# balance: 2.217214e-04,
+# income: 4.729534e-06
 
 # d.) Comment on the estimated standard errors obtained using the glm() function
 # and using your bootstrap function.
 
+# The standard errors obtained from glm() and those obtained from the bootstrap
+# are different but not with a big margin. The glm() function makes some assumptions
+# about the distribution of the target class while the bootstrap estimates 
+# does not rely on any estimates and thus more likely to give accurate estimates
 
 ################################################################################
 # 7. The cv.glm() function can be used in order to compute the LOOCV test error estimate.
