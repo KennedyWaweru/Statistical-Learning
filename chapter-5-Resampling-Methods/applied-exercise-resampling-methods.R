@@ -201,8 +201,16 @@ y <- x - 2 * x^2 + rnorm(100)
 # In this data set, what is n and what is p?
 # Write out the model used to generate the data in equation form
 
+# n: number of observations = 100
+# p: number of variables = 2 (x and y)
+
+# Equation: Y = x + x*2 + e
+
 # b.) Create a scatter plot of X against Y. Comment on what you find.
 
+plot(x, y)
+
+# there is a nonlinear r/ship between x and y
 
 # c.) Set a random seed, and then compute the LOOCV errors that result from fitting
 # the following four models using least squares:
@@ -216,60 +224,190 @@ y <- x - 2 * x^2 + rnorm(100)
 # iv. Y = B_0 + B_1 X + B_2 X^2 + B_3 X^3 + B_4 X^4 + e
 
 # Note that you may find it helpful to use the data.frame() function to create
-# a single data set containing bot X and Y.
+# a single data set containing both X and Y.
+library(boot)
+
+# create a dataframe to contain the data for the cv.glm(data, model) function
+df = data.frame(X=x, Y=y)
+
+set.seed(123)
+model_1 = glm(Y~X, data=df)
+loocv_model_1 = cv.glm(df, model_1)
+loocv_model_1$delta[1]
+# model_1 loocv error: 7.28816
+
+model_2 = glm(Y~X+I(X**2), data=df)
+loocv_model_2 <- cv.glm(df, model_2)
+loocv_model_2$delta[1]
+# model_2 loocv error: 0.9374
+
+model_3 = glm(Y~X+I(X**2)+I(X**3), data=df)
+loocv_model_3 = cv.glm(df, model_3)
+loocv_model_3$delta[1]
+# model_3 loocv error: 0.9566
+
+#model_3 = lm(y~x+I(x^2)+I(x^3))
+model_4 = glm(Y~poly(X,4), data=df)
+loocv_model_4 <- cv.glm(df, model_4)
+loocv_model_4$delta[1]
+# model_4 loocv error: 0.9539
 
 
 # d.) Repeat (c) using another random seed, and report your results. Are your 
 # results the same as what you got in (c) ? Why?
 
+set.seed(456)
+model_1 = glm(Y~X, data=df)
+loocv_model_1 = cv.glm(df, model_1)
+loocv_model_1$delta[1]
+# model_1 loocv error: 7.28816
+
+model_2 = glm(Y~X+I(X**2), data=df)
+loocv_model_2 <- cv.glm(df, model_2)
+loocv_model_2$delta[1]
+# model_2 loocv error: 0.9374
+
+model_3 = glm(Y~X+I(X**2)+I(X**3), data=df)
+loocv_model_3 = cv.glm(df, model_3)
+loocv_model_3$delta[1]
+# model_3 loocv error: 0.9566
+
+#model_3 = lm(y~x+I(x^2)+I(x^3))
+model_4 = glm(Y~poly(X,4), data=df)
+loocv_model_4 <- cv.glm(df, model_4)
+loocv_model_4$delta[1]
+# model_4 loocv error: 0.9539
+
+# The error after changing the seed remains constant. 
+# Comment: The LOOCV error does not change after changing the seed because 
+# the method leaves only one observation out and changing the randomization 
+# does not affect the error because the same observations will be used
 
 # e.) Which of the models in (c) had the smallest LOOCV error? 
 # Is this what you expected? Explain your answer.
 
+# Model 2: Y = B_0 + B_1 X_1 + B_2 X_2^2 + e
+# I expected this. From the scatter plot it is evident that the variables have a 
+# quadratic relationship and the quadratic model has the lowers error.
+# Higher polynomial produce higher errors since the curve is a simple curve
+# indicating a lower polynomial term
 
 # f.) Comment on the statistical significance of the coefficient estimates that
 # result from fitting each of the models in (c) using least squares. 
 # Do these results agree with the conclusions drawn based on the cross-validation results?
+summary(model_1)
+summary(model_2)
+summary(model_3)
+summary(model_4)
 
+# Comment: Only the first and second term coefficients are statistically significant
+# for all models. This indicates that the variables have a quadratic relationship
+# and higher polynomial orders do not provide a good fit for the model.
+# According to the cross-validation method, model_2 has the lowest error 
+# indicating that the model with two terms is most suitable, and thus the only
+# significant coefficients are for the first and second terms.
 
 
 ################################################################################
 # 9. We will now consider the Boston housing data set
 
+library(ISLR2) # to obtain the Boston data set
+help(Boston)
+
 # a.) Based on this data set, provide an estimate for the population mean of medv.
 # Call this estimate mu_hat.
 
+mu_hat <- mean(Boston$medv)
+mu_hat
+
+# estimation of population mean: 22.5328
 
 # b.) Provide an estimate of the standard error of mu_hat. Interpret this result
 # Hint: We can compute the standard error of the sample mean by dividing the sample
 # standard deviation by the square root of the number of observations.
 
+sigma_square <- var(Boston$medv) # variance
+std_dev <- sqrt(sigma_square) # standard deviation
+num_obs <- length(Boston$medv)
+
+std_error <- std_dev/sqrt(num_obs)
+std_error
+
+# standard error of mu_hat: 0.40886
 
 # c.) Now estimate the standard error of mu_hat using the bootstrap.
 # How does this compare to your answer from (b)?
 
+boot.fn <- function(data, idx){
+  to_use <- data$medv[idx]
+  sigma_square <- var(to_use)
+  std_dev <- sqrt(sigma_square)
+  num_obs <- length(to_use)
+  
+  (std_err <- std_dev/sqrt(num_obs))
+}
+
+boot.fn(Boston, 1:100)
+
+boot(Boston,boot.fn,1000)
+
+# Bootstrap Estimate: 0.40886
+# The bootstrap estimate of the standard error is equal to the standard error
+# obtained using the formula above
 
 # d.) Based on your bootstrap estimate from (c), provide a 95% confidence interval
 # for the mean of medv. Compare it to the results obtained using t.test(Boston$medv)
 
 # Hint: You can approximate a 95% CI using the formula [mu_hat -2SE(mu_hat), mu_hat + 2SE(mu_hat)].
 
+lower_ci_bound = mu_hat - 2*(0.40886)
+upper_ci_bound = mu_hat + 2*(0.40886)
+lower_ci_bound
+upper_ci_bound
+# The 95% CI = [21.71509, 23.35053]
+
+t.test(Boston$medv)
+# The 95% CI = [21.72953, 23.33608]
 
 # e.) Based on this data set, provide an estimate, mu_hat_med, for the median value
 # of medv in the population.
-
+mu_hat_med = median(Boston$medv)
+mu_hat_med
+# median value estimate = 21.2
 
 # f.) We now would like to estimate the standard error of mu_hat_med.
 # Unfortunately there is no simple formula for computing the standard error of the median.
 # Instead, estimate the standard error of the median using the bootstrap.
 # Comment on your findings.
 
+boot.fn <- function(data, idx){
+  to_use <- data$medv[idx]
+  med_hat <- median(to_use)
+  med_hat
+}
+boot.fn(Boston, sample(400,400))
+boot(Boston, boot.fn, 1000)
+
+# Standard error of the median estimate = 0.39014
 
 # g.) Based on this data set, provide an estimate for the tenth percentile of medv
 # in Boston census tracts. Call this quantity mu_hat_0.1
 # Hint: You can use the quantile() function.
 
+mu_hat_0.1 <- quantile(Boston$medv, .1) 
+mu_hat_0.1
+# estimate: 12.75
 
 # h.) Use the bootstrap to estimate the standard error of mu_hat_0.1.
 # Comment on your findings. 
 
+boot.fn <- function(data, idx){
+  to_use <- data$medv[idx]
+  mu_hat_0.1 <- quantile(to_use, 0.1)
+  mu_hat_0.1
+}
+boot.fn(Boston, sample(dim(Boston)[1], 400, replace=T))
+# Estimate: 13.07
+boot(Boston, boot.fn, 1000)
+
+# standard error of estimate: 0.49426
